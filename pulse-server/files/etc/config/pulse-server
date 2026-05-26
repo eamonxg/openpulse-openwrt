@@ -1,0 +1,4 @@
+config pulse-server 'config'
+	option enabled '1'
+	option port '6688'
+	option token ''
