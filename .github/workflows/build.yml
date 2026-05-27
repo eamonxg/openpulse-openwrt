@@ -34,12 +34,12 @@ jobs:
           ARCH: ${{ matrix.arch }}-${{ matrix.release }}
           ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
           FEED_DIR: ${{ github.workspace }}
-          PACKAGES: pulse-server
+          PACKAGES: openpulse-server
           V: s
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pulse-server-${{ matrix.arch }}-${{ matrix.release }}
+          name: openpulse-server-${{ matrix.arch }}-${{ matrix.release }}
           path: |
             artifacts/bin/packages/${{ matrix.arch }}/**/*.ipk
             artifacts/bin/packages/${{ matrix.arch }}/**/*.apk
@@ -57,5 +57,5 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          name: pulse-server-${{ github.ref_name }}
+          name: openpulse-server-${{ github.ref_name }}
           files: dist/**/*.[ai]pk

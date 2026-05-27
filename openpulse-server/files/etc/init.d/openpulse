@@ -4,7 +4,7 @@ START=95
 STOP=10
 USE_PROCD=1
 
-PROG=/usr/bin/pulse-server
+PROG=/usr/bin/openpulse-server
 
 generate_token() {
 	local tok
@@ -16,7 +16,7 @@ generate_token() {
 start_service() {
 	local enabled port token lan_ip
 
-	config_load pulse-server
+	config_load openpulse
 	config_get enabled config enabled '1'
 	config_get port config port '6688'
 	config_get token config token ''
@@ -25,9 +25,9 @@ start_service() {
 
 	if [ -z "$token" ]; then
 		token=$(generate_token)
-		uci set pulse-server.config.token="$token"
-		uci commit pulse-server
-		logger -t pulse-server "Generated API token"
+		uci set openpulse.config.token="$token"
+		uci commit openpulse
+		logger -t openpulse-server "Generated API token"
 	fi
 
 	lan_ip=$(ubus call network.interface.lan status 2>/dev/null |
@@ -41,9 +41,9 @@ start_service() {
 	procd_set_param respawn
 	procd_close_instance
 
-	logger -t pulse-server "Listening on ${lan_ip}:${port}"
+	logger -t openpulse-server "Listening on ${lan_ip}:${port}"
 }
 
 service_triggers() {
-	procd_add_reload_trigger pulse-server
+	procd_add_reload_trigger openpulse
 }

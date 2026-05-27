@@ -1,6 +1,6 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=pulse-server
+PKG_NAME:=openpulse-server
 PKG_VERSION:=0.1.0
 PKG_RELEASE:=1
 
@@ -20,25 +20,25 @@ RUST_PKG_LOCKED:=1
 include $(INCLUDE_DIR)/package.mk
 include $(TOPDIR)/feeds/packages/lang/rust/rust-package.mk
 
-define Package/pulse-server
+define Package/openpulse-server
   SECTION:=net
   CATEGORY:=Network
   TITLE:=OpenPulse router monitoring service
   DEPENDS:=$(RUST_ARCH_DEPENDS)
 endef
 
-define Package/pulse-server/description
+define Package/openpulse-server/description
   Router-side REST and SSE service for OpenPulse Mobile.
 endef
 
-define Package/pulse-server/install
+define Package/openpulse-server/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/bin/pulse-server $(1)/usr/bin/pulse-server
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/bin/openpulse-server $(1)/usr/bin/openpulse-server
 	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_DATA) ./files/etc/config/pulse-server $(1)/etc/config/pulse-server
+	$(INSTALL_DATA) ./files/etc/config/openpulse $(1)/etc/config/openpulse
 	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/etc/init.d/pulse-server $(1)/etc/init.d/pulse-server
+	$(INSTALL_BIN) ./files/etc/init.d/openpulse $(1)/etc/init.d/openpulse
 endef
 
-$(eval $(call RustBinPackage,pulse-server))
-$(eval $(call BuildPackage,pulse-server))
+$(eval $(call RustBinPackage,openpulse-server))
+$(eval $(call BuildPackage,openpulse-server))
