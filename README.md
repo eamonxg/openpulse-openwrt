@@ -39,34 +39,51 @@ openpulse-server/
       init.d/openpulse
 ```
 
-`openpulse-server/Makefile` fetches the Rust source from:
+The Makefile expects a pre-built statically-linked binary at
+`openpulse-server/prebuilt-bin/openpulse-server` before the SDK runs.
+The CI pipeline places it there automatically; see the GitHub Actions section
+below.
 
-```text
-https://github.com/eamonxg/openpulse.git
-```
+## Supported Architectures
 
-The build currently tracks `main` via `PKG_SOURCE_VERSION:=main`. For
-reproducible releases, pin this to a Git tag or commit SHA and update
-`PKG_MIRROR_HASH`.
+OpenPulse ships statically-linked musl binaries for the following 14 OpenWrt
+architectures, produced by CI from 3 Rust target triples:
 
-## Build With OpenWrt SDK
+| Rust target                         | OpenWrt platforms |
+|-------------------------------------|-------------------|
+| `aarch64-unknown-linux-musl`        | `aarch64_generic`, `aarch64_cortex-a53`, `aarch64_cortex-a72`, `aarch64_cortex-a76` |
+| `x86_64-unknown-linux-musl`         | `x86_64` |
+| `armv7-unknown-linux-musleabihf`    | `arm_cortex-a7`, `arm_cortex-a7_vfpv4`, `arm_cortex-a7_neon-vfpv4`, `arm_cortex-a5_vfpv4`, `arm_cortex-a8_vfpv3`, `arm_cortex-a9`, `arm_cortex-a9_vfpv3-d16`, `arm_cortex-a9_neon`, `arm_cortex-a15_neon-vfpv4` |
 
-Inside an OpenWrt SDK checkout, add this repository as a custom feed:
+### Explicitly unsupported
 
-```sh
-echo "src-git openpulse_openwrt https://github.com/eamonxg/openpulse-openwrt.git" >> feeds.conf.default
-./scripts/feeds update openpulse_openwrt
-./scripts/feeds install openpulse-server
-```
+- All `mips_*` / `mipsel_*` platforms (Rust dropped tier-2 support in 1.72; removed from rustup in 1.78).
+- Pre-ARMv7 chips (`arm_arm926ej-s`, `arm_fa526`, `arm_xscale`, `arm_arm1176jzf-s_vfp`).
+- `riscv64_riscv64` — buildable, but no consumer router uses it; can be added on demand.
 
-Compile the package:
+### Building locally
 
-```sh
-make package/openpulse-server/compile V=s
-```
+This feed contains a Makefile that wraps a **pre-built binary** produced by
+the OpenPulse CI. To build a `.ipk` locally:
 
-The resulting `.ipk` or `.apk` artifacts are written under the SDK `bin/`
-directory for the selected target.
+1. Build the Rust binary using `cross` from the [`openpulse`](https://github.com/eamonxg/openpulse) repo:
+   ```bash
+   cd openpulse/apps/server
+   cross build --release --target aarch64-unknown-linux-musl
+   ```
+2. Copy the binary into this feed's `openpulse-server/prebuilt-bin/`:
+   ```bash
+   mkdir -p openpulse-server/prebuilt-bin
+   cp openpulse/apps/server/target/aarch64-unknown-linux-musl/release/openpulse-server \
+      openpulse-server/prebuilt-bin/
+   ```
+3. Use the OpenWrt SDK (Docker image or local install) with this directory as a feed and run:
+   ```bash
+   make package/openpulse-server/compile V=s
+   ```
+
+The same `cross build` command is what CI runs in stage 1 — local and CI
+binaries are byte-identical given the same `RUSTFLAGS` and source commit.
 
 ## Runtime Configuration
 
@@ -95,31 +112,20 @@ token and writes it to UCI. OpenPulse Mobile uses this token as a Bearer token:
 Authorization: Bearer <token>
 ```
 
-## Local Development
-
-For local package testing, edit `openpulse-server/Makefile`:
-
-```make
-PKG_SOURCE_URL:=https://github.com/eamonxg/openpulse.git
-PKG_SOURCE_VERSION:=main
-```
-
-Common options:
-
-| Goal | Change |
-|------|--------|
-| Build from a branch | Set `PKG_SOURCE_VERSION` to the branch name |
-| Build from a commit | Set `PKG_SOURCE_VERSION` to the commit SHA |
-| Build from a release | Set `PKG_SOURCE_VERSION` to the release tag |
-| Reproducible build | Replace `PKG_MIRROR_HASH:=skip` with the real hash |
-
 ## GitHub Actions
 
-The workflow in `.github/workflows/build.yml` builds `openpulse-server` across
-multiple OpenWrt releases and target architectures using `openwrt/gh-action-sdk`.
+The workflow in `.github/workflows/build.yml` runs in two stages:
 
-On tag pushes matching `v*`, the workflow uploads package artifacts to the
-GitHub Release.
+**Stage 1 (`build-rust`)** — 6 jobs, each running `cross build --release` for
+one binary variant. Produces artifacts named `openpulse-binary-<binary_id>`.
+
+**Stage 2 (`build-openwrt-package`)** — 28 jobs (14 platforms × 2 OpenWrt
+releases). Each job downloads the matching binary artifact from stage 1 and
+invokes `openwrt/gh-action-sdk` to produce a `.ipk`. No Rust compilation
+happens in this stage.
+
+On tag pushes matching `v*`, the `release` job attaches all 28 `.ipk` files to
+a GitHub Release.
 
 ## Naming
 
