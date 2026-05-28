@@ -87,13 +87,16 @@ jobs:
           PACKAGES: openpulse-server
           V: s
 
+      - name: List artifacts directory
+        run: find ${{ github.workspace }}/artifacts -type f 2>/dev/null || echo "artifacts dir empty"
+
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
         with:
           name: openpulse-server-${{ matrix.platform }}-${{ matrix.release }}
           path: |
-            artifacts/bin/packages/${{ matrix.platform }}/**/*.ipk
-            artifacts/bin/packages/${{ matrix.platform }}/**/*.apk
+            artifacts/**/*.ipk
+            artifacts/**/*.apk
           if-no-files-found: error
 
   # =========================================================================
