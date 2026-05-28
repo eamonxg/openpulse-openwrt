@@ -93,6 +93,14 @@ jobs:
       - name: List artifacts directory
         run: find ${{ github.workspace }}/artifacts -type f 2>/dev/null || echo "artifacts dir empty"
 
+      - name: Rename .apk to include platform (apk format omits arch in filename)
+        run: |
+          find ${{ github.workspace }}/artifacts -name '*.apk' | while read f; do
+            dir=$(dirname "$f")
+            base=$(basename "$f" .apk)
+            mv "$f" "${dir}/${base}-${{ matrix.platform }}.apk"
+          done
+
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
         with:
