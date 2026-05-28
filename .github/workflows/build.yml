@@ -97,9 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openpulse-server-${{ matrix.platform }}-${{ matrix.release }}
-          path: |
-            artifacts/**/*.ipk
-            artifacts/**/*.apk
+          path: artifacts/**/openpulse-server*.[ai]pk
           if-no-files-found: error
 
   # =========================================================================

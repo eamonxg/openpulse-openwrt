@@ -27,7 +27,7 @@ define Package/openpulse-server
   CATEGORY:=Network
   TITLE:=OpenPulse router monitoring service
   URL:=https://github.com/eamonxg/openpulse
-  # Statically-linked musl binary — no runtime deps.
+  DEPENDS:=
 endef
 
 define Package/openpulse-server/description
