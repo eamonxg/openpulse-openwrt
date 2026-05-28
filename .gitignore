@@ -1,0 +1,3 @@
+# Ephemeral staging directory populated by CI before invoking the OpenWrt SDK.
+# The authoritative binaries live in openpulse-server/bins/.
+openpulse-server/prebuilt-bin/

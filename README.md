@@ -63,27 +63,49 @@ architectures, produced by CI from 3 Rust target triples:
 
 ### Building locally
 
-This feed contains a Makefile that wraps a **pre-built binary** produced by
-the OpenPulse CI. To build a `.ipk` locally:
+Pre-built binaries are committed in `openpulse-server/bins/<binary_id>/openpulse-server`.
+To build a `.ipk` locally, copy the desired binary to the staging directory and
+invoke the SDK:
 
-1. Build the Rust binary using `cross` from the [`openpulse`](https://github.com/eamonxg/openpulse) repo:
-   ```bash
-   cd openpulse/apps/server
-   cross build --release --target aarch64-unknown-linux-musl
-   ```
-2. Copy the binary into this feed's `openpulse-server/prebuilt-bin/`:
-   ```bash
-   mkdir -p openpulse-server/prebuilt-bin
-   cp openpulse/apps/server/target/aarch64-unknown-linux-musl/release/openpulse-server \
-      openpulse-server/prebuilt-bin/
-   ```
-3. Use the OpenWrt SDK (Docker image or local install) with this directory as a feed and run:
-   ```bash
-   make package/openpulse-server/compile V=s
-   ```
+```bash
+mkdir -p openpulse-server/prebuilt-bin
+cp openpulse-server/bins/aarch64-generic/openpulse-server \
+   openpulse-server/prebuilt-bin/openpulse-server
+make package/openpulse-server/compile V=s
+```
 
-The same `cross build` command is what CI runs in stage 1 — local and CI
-binaries are byte-identical given the same `RUSTFLAGS` and source commit.
+### Updating binaries
+
+When a new server version is ready, rebuild and commit the binaries:
+
+```bash
+# From the openpulse server source directory
+export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:$PATH"
+
+cargo zigbuild --release --target x86_64-unknown-linux-musl -p openpulse-server
+cargo zigbuild --release --target armv7-unknown-linux-musleabihf -p openpulse-server
+cargo zigbuild --release --target aarch64-unknown-linux-musl -p openpulse-server
+
+BINS=<path-to-openpulse-openwrt>/openpulse-server/bins
+TARGET=apps/server/target
+
+cp $TARGET/x86_64-unknown-linux-musl/release/openpulse-server      $BINS/x86_64/
+cp $TARGET/armv7-unknown-linux-musleabihf/release/openpulse-server  $BINS/armv7-baseline/
+cp $TARGET/aarch64-unknown-linux-musl/release/openpulse-server      $BINS/aarch64-generic/
+
+RUSTFLAGS="-C target-cpu=cortex-a53" cargo zigbuild --release --target aarch64-unknown-linux-musl -p openpulse-server
+cp $TARGET/aarch64-unknown-linux-musl/release/openpulse-server      $BINS/aarch64-cortex-a53/
+
+RUSTFLAGS="-C target-cpu=cortex-a72" cargo zigbuild --release --target aarch64-unknown-linux-musl -p openpulse-server
+cp $TARGET/aarch64-unknown-linux-musl/release/openpulse-server      $BINS/aarch64-cortex-a72/
+
+RUSTFLAGS="-C target-cpu=cortex-a76" cargo zigbuild --release --target aarch64-unknown-linux-musl -p openpulse-server
+cp $TARGET/aarch64-unknown-linux-musl/release/openpulse-server      $BINS/aarch64-cortex-a76/
+
+# Then commit in openpulse-openwrt:
+git add openpulse-server/bins/
+git commit -m "chore: update prebuilt binaries to vX.Y.Z"
+```
 
 ## Runtime Configuration
 
@@ -114,15 +136,11 @@ Authorization: Bearer <token>
 
 ## GitHub Actions
 
-The workflow in `.github/workflows/build.yml` runs in two stages:
-
-**Stage 1 (`build-rust`)** — 6 jobs, each running `cross build --release` for
-one binary variant. Produces artifacts named `openpulse-binary-<binary_id>`.
-
-**Stage 2 (`build-openwrt-package`)** — 28 jobs (14 platforms × 2 OpenWrt
-releases). Each job downloads the matching binary artifact from stage 1 and
-invokes `openwrt/gh-action-sdk` to produce a `.ipk`. No Rust compilation
-happens in this stage.
+The workflow in `.github/workflows/build.yml` has a single stage:
+**`build-openwrt-package`** — 28 jobs (14 platforms × 2 OpenWrt releases).
+Each job checks out this repo (which includes the pre-built binaries in
+`bins/`), copies the correct binary to `prebuilt-bin/`, then invokes
+`openwrt/gh-action-sdk` to produce a `.ipk`. No Rust compilation happens in CI.
 
 On tag pushes matching `v*`, the `release` job attaches all 28 `.ipk` files to
 a GitHub Release.
